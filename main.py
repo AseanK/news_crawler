@@ -61,6 +61,11 @@ if __name__ == "__main__":
         if inp == "q":
             driver.quit()
 
+        ## Validation needed if inp > 0 and inp < len(data)
         data[int(inp)].find_element(By.XPATH, "..").click()
-        driver.execute_cdp_cmd("Emulation.setScriptExecutionDisabled", {"value": True})
+
+        body = driver.find_element(By.CLASS_NAME, "body")
+        content = body.find_elements(By.XPATH, "//p[contains(@class, 'yf-')]")
+        for i in content:
+            print(i.text)
 
