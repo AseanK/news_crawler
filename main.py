@@ -5,6 +5,10 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.proxy import Proxy, ProxyType
 
+import anthropic
+
+import os
+
 import requests
 from lxml.html import fromstring
 
@@ -77,3 +81,7 @@ if __name__ == "__main__":
             content += i.text
 
         print(content)
+
+def get_summary():
+    api_key = os.
+    pass
