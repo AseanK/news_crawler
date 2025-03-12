@@ -56,6 +56,7 @@ if __name__ == "__main__":
         print(f"{i}. {headline.text}")
 
     while running:
+        content = ""
         inp = input("")
 
         if inp == "q":
@@ -64,8 +65,15 @@ if __name__ == "__main__":
         ## Validation needed if inp > 0 and inp < len(data)
         data[int(inp)].find_element(By.XPATH, "..").click()
 
-        body = driver.find_element(By.CLASS_NAME, "body")
-        content = body.find_elements(By.XPATH, "//p[contains(@class, 'yf-')]")
-        for i in content:
-            print(i.text)
+        body = WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.CLASS_NAME, "body-wrap")))
+        try:
+            body.find_element(By.CLASS_NAME, "readmore-button").click()
+        except Exception:
+            pass
 
+        content_list = body.find_elements(By.XPATH, "//p[contains(@class, 'yf-')]")
+
+        for i in content_list:
+            content += i.text
+
+        print(content)
