@@ -9,6 +9,8 @@ from selenium.webdriver.common.keys import Keys
 
 from openai import AsyncOpenAI
 
+import platform
+
 import os
 import requests
 from lxml.html import fromstring
@@ -16,6 +18,10 @@ from lxml.html import fromstring
 from firebase import Firebase
 
 API_KEY = os.getenv("CHATGPT_API")
+
+def get_platform():
+    return platform.system == 'Linux' or 'Windows'
+
 
 def get_proxies():
     url = 'https://free-proxy-list.net/anonymous-proxy.html'
@@ -28,6 +34,7 @@ def get_proxies():
             proxy = ":".join([i.xpath('.//td[1]/text()')[0], i.xpath('.//td[2]/text()')[0]])
             proxies.add(proxy)
     return proxies
+
 
 async def get_summary(article):
     client = AsyncOpenAI(
@@ -64,6 +71,7 @@ async def get_top_articles(headlines):
 async def main():
     opts = Options()
     fb = Firebase()
+    mac_os = get_platform()
     opts.page_load_strategy = 'eager'
     opts.add_argument('--blink-settings=imagesEnabled=false')
 
@@ -78,24 +86,34 @@ async def main():
     for i in top_articles:
         heading = data[i].text
         content = ""
-        data[i].find_element(By.XPATH, "..").send_keys(Keys.COMMAND, Keys.RETURN) ## Open each article in separate tab
+
+        ## Open each article in separate tab
+        if mac_os:
+            data[i].find_element(By.XPATH, "..").send_keys(Keys.COMMAND, Keys.RETURN)
+        else:
+            data[i].find_element(By.XPATH, "..").send_keys(Keys.COMMAND, Keys.RETURN) 
+
         driver.switch_to.window(driver.window_handles[-1]) ## Focus to article tabs
 
-        body = WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.CLASS_NAME, "body-wrap"))) ## Wait to load
+        try:
+            body = WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.CLASS_NAME, "body-wrap"))) ## Wait to load
 
-        try: ## If read more, click it
-            body.find_element(By.CLASS_NAME, "readmore-button").click()
+            try: ## If read more, click it
+                body.find_element(By.CLASS_NAME, "readmore-button").click()
+            except Exception:
+                pass
+
+            content_list = body.find_elements(By.XPATH, "//p[contains(@class, 'yf-')]") ## Content body in a list
+
+            for i in content_list:
+                content += i.text
+
+            summary = await get_summary(content) ## Get summary
+
+            fb.create_data(heading, summary)
+
         except Exception:
-            pass
-
-        content_list = body.find_elements(By.XPATH, "//p[contains(@class, 'yf-')]") ## Content body in a list
-
-        for i in content_list:
-            content += i.text
-
-        summary = await get_summary(content) ## Get summary
-
-        fb.create_data(heading, summary)
+            continue
         
 
 
