@@ -19,6 +19,7 @@ from firebase import Firebase
 
 API_KEY = os.getenv("CHATGPT_API")
 
+
 def get_platform():
     return platform.system == 'Linux' or 'Windows'
 
@@ -43,11 +44,20 @@ async def get_summary(article):
 
     response = await client.responses.create(
         model="gpt-4o-mini",
-        instructions="Provide concise and comprehensive summary of the given article and list stock markets that might get affected according to the article. Explain how it'll be affected. Rate the impact it might cause out of 5 (5 = Extremly affected, 1 = least likely to get affected)",
+        instructions=
+        """
+        Provide concise and comprehensive summary of the given article and list stock markets that might get affected according to the article.
+        Explain how it'll be affected. Rate the impact it might cause out of 5 (5 = Extremly affected, 1 = least likely to get affected).
+        Use the following format, fill in the ():
+        <p>(summary)</p>
+        <p></p>
+
+        """,
         input=article,
     )
 
     return response.output_text
+
 
 async def get_top_articles(headlines):
     inp = ""
@@ -60,7 +70,7 @@ async def get_top_articles(headlines):
 
     response = await client.responses.create(
         model="gpt-4o-mini",
-        instructions="Provide only space separated indice of following headlines that are crucial and impactful in stock market.",
+        instructions="Only provide a space separated indice of following headlines that are crucial and impactful in stock market.",
         input=inp,
     )
 
@@ -112,10 +122,11 @@ async def main():
 
             fb.create_data(heading, summary)
 
+            driver.close()
+
         except Exception:
             continue
         
-
 
 if __name__ == "__main__":
     asyncio.run(main())
