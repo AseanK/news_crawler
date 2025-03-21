@@ -7,81 +7,21 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.proxy import Proxy, ProxyType
 from selenium.webdriver.common.keys import Keys
 
-from openai import AsyncOpenAI
-
 import platform
 
-import os
-import requests
-from lxml.html import fromstring
-
 from firebase import Firebase
-
-API_KEY = os.getenv("CHATGPT_API")
+from gpt import ChatGPT
 
 
 def get_platform():
-    return platform.system == 'Linux' or 'Windows'
-
-
-def get_proxies():
-    url = 'https://free-proxy-list.net/anonymous-proxy.html'
-    response = requests.get(url)
-    parser = fromstring(response.text)
-    proxies = set()
-    for i in parser.xpath('//tbody/tr')[:30]:
-        if i.xpath('.//td[7][contains(text(),"yes")]'):
-            #Grabbing IP and corresponding PORT
-            proxy = ":".join([i.xpath('.//td[1]/text()')[0], i.xpath('.//td[2]/text()')[0]])
-            proxies.add(proxy)
-    return proxies
-
-
-async def get_summary(article):
-    client = AsyncOpenAI(
-        api_key = API_KEY
-    )
-
-    response = await client.responses.create(
-        model="gpt-4o-mini",
-        instructions=
-        """
-        Provide concise and comprehensive summary of the given article and list stock markets that might get affected according to the article.
-        Explain how it'll be affected. Rate the impact it might cause out of 5 (5 = Extremly affected, 1 = least likely to get affected).
-        Use the following format, fill in the ():
-        <p>(summary)</p>
-        <p></p>
-
-        """,
-        input=article,
-    )
-
-    return response.output_text
-
-
-async def get_top_articles(headlines):
-    inp = ""
-    for i, headline in enumerate(headlines):
-        inp += f"{i}. {headline.text}"
-
-    client = AsyncOpenAI(
-        api_key = API_KEY
-    )
-
-    response = await client.responses.create(
-        model="gpt-4o-mini",
-        instructions="Only provide a space separated indice of following headlines that are crucial and impactful in stock market.",
-        input=inp,
-    )
-
-    ## Check for duplicated headline
-    return [int(x) for x in response.output_text.split()]
+    return platform.system != 'Linux' or 'Windows'
 
 
 async def main():
+    gpt = ChatGPT()
     opts = Options()
     fb = Firebase()
-    mac_os = get_platform()
+    is_mac_os = get_platform()
     opts.page_load_strategy = 'eager'
     opts.add_argument('--blink-settings=imagesEnabled=false')
 
@@ -90,18 +30,18 @@ async def main():
 
     data = driver.find_elements(By.XPATH, "//h3[contains(@class, 'clamp')]")
 
-    top_articles = await get_top_articles(data)
-    print(top_articles)
+    top_articles = await gpt.get_top_articles(data)
 
     for i in top_articles:
+        driver.switch_to.window(driver.window_handles[0])
         heading = data[i].text
         content = ""
 
         ## Open each article in separate tab
-        if mac_os:
+        if is_mac_os:
             data[i].find_element(By.XPATH, "..").send_keys(Keys.COMMAND, Keys.RETURN)
         else:
-            data[i].find_element(By.XPATH, "..").send_keys(Keys.COMMAND, Keys.RETURN) 
+            data[i].find_element(By.XPATH, "..").send_keys(Keys.CONTROL, Keys.RETURN) 
 
         driver.switch_to.window(driver.window_handles[-1]) ## Focus to article tabs
 
@@ -118,14 +58,14 @@ async def main():
             for i in content_list:
                 content += i.text
 
-            summary = await get_summary(content) ## Get summary
+            summary = await gpt.get_summary(content) ## Get summary
 
             fb.create_data(heading, summary)
 
-            driver.close()
-
         except Exception:
             continue
+
+    driver.quit()
         
 
 if __name__ == "__main__":
