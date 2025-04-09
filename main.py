@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
@@ -8,27 +9,40 @@ from selenium.webdriver.common.proxy import Proxy, ProxyType
 from selenium.webdriver.common.keys import Keys
 
 import platform
+import json
 
 from firebase import Firebase
 from gpt import ChatGPT
 
 
 def get_platform():
-    return platform.system != 'Linux' or 'Windows'
+    os = platform.system()
+    return (os != 'Linux' or os == 'Windows')
 
+
+def convert_to_json(inp):
+    if inp.startswith("```json"):
+        inp = inp.strip("```json").strip().strip("```")
+
+    try:
+        json_data = json.loads(inp)
+        return json_data
+    except json.JSONDecodeError as e:
+        print(f"Error decoding JSON: {e}")
+        return None
 
 async def main():
     gpt = ChatGPT()
     opts = Options()
     fb = Firebase()
-    is_mac_os = get_platform()
+    is_not_ios = get_platform()
     opts.page_load_strategy = 'eager'
     opts.add_argument('--blink-settings=imagesEnabled=false')
 
     driver = webdriver.Chrome(opts)
     driver.get("https://finance.yahoo.com/topic/latest-news/")
 
-    data = driver.find_elements(By.XPATH, "//h3[contains(@class, 'clamp')]")
+    data = driver.find_elements(By.XPATH, "//h3[contains(@class, 'clamp')]") ## HEADING ELEMENT
 
     top_articles = await gpt.get_top_articles(data)
 
@@ -38,7 +52,7 @@ async def main():
         content = ""
 
         ## Open each article in separate tab
-        if is_mac_os:
+        if is_not_ios:
             data[i].find_element(By.XPATH, "..").send_keys(Keys.COMMAND, Keys.RETURN)
         else:
             data[i].find_element(By.XPATH, "..").send_keys(Keys.CONTROL, Keys.RETURN) 
@@ -46,21 +60,27 @@ async def main():
         driver.switch_to.window(driver.window_handles[-1]) ## Focus to article tabs
 
         try:
-            body = WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.CLASS_NAME, "body-wrap"))) ## Wait to load
+            body = WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.CLASS_NAME, "body-wrap"))) ## BODY ELEMENT
+            timestamp = driver.find_element(By.CLASS_NAME, "article-wrap").find_element(By.XPATH, "//time").get_attribute('datetime')
 
             try: ## If read more, click it
                 body.find_element(By.CLASS_NAME, "readmore-button").click()
             except Exception:
                 pass
 
-            content_list = body.find_elements(By.XPATH, "//p[contains(@class, 'yf-')]") ## Content body in a list
+            content_list = body.find_elements(By.XPATH, "//p[contains(@class, 'yf-')]") ## ARTICLE CONTENT ELEMENT
 
             for i in content_list:
                 content += i.text
 
-            summary = await gpt.get_summary(content) ## Get summary
+            summary_data = await gpt.get_summary(content) ## Get summary
 
-            fb.create_data(heading, summary)
+            summary_data = convert_to_json(summary_data)
+
+            if data != None:
+                fb.create_data(heading, summary_data, timestamp)
+
+            driver.close()
 
         except Exception:
             continue

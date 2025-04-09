@@ -32,12 +32,31 @@ class ChatGPT:
             """
             Provide concise and comprehensive summary of the given article and list stock markets that might get affected according to the article.
             Explain how it'll be affected. Rate the impact it might cause out of 5 (5 = Extremly affected, 1 = least likely to get affected).
-            Use the following format, fill in the []:
-            [summary of the provided article]
-            ### Possible impact
-            [bullet points of companies that are likely to get affected with following format]
-            - **[Company name (ticker symbol)]** [rating of the impact with ★]
-                - [Explanation of the impact]
+            Use the following rules:
+            1. Use the following JSON format and update the values
+            2. Do not add or manipulate anything other than the values in the JSON
+            3. "Impacts" represents the stock markets that might get affected
+            4. "Impacts" should contain at least 2 stock markets but no more than 6
+            5. Response should only contain JSON
+            6. In summary, do not mention that the output is a summary. Write the summary as it is original
+            Template:
+            {
+            "summary": "summary of the article",
+            "impacts": [
+                        [
+                            "company": "company name",
+                            "ticker": "ticker symbol",
+                            "ticker": "ticker symbol only with alphabet characters",
+                            "rating": "impact rating using only ★, do not use any other character"
+                        ],
+                        [
+                            "company": "company name",
+                            "ticker": "ticker symbol only with alphabet characters",
+                            "rating": "impact rating using only ★, do not use any other character"
+                            "explanation": "Explanation of the impact"
+                        ],
+                    ],
+            }
             """,
             input=article,
         )
