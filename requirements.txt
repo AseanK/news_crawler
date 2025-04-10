@@ -8,6 +8,7 @@ cffi==1.17.1
 charset-normalizer==3.4.1
 cryptography==44.0.2
 distro==1.9.0
+dotenv==0.9.9
 firebase-admin==6.7.0
 google-api-core==2.24.2
 google-api-python-client==2.164.0
@@ -41,6 +42,7 @@ pydantic_core==2.27.2
 PyJWT==2.10.1
 pyparsing==3.2.1
 PySocks==1.7.1
+python-dotenv==1.1.0
 requests==2.32.3
 rsa==4.9
 selenium==4.29.0

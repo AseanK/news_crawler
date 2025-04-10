@@ -1,5 +1,5 @@
 import asyncio
-from datetime import datetime
+import argparse
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
@@ -11,6 +11,7 @@ from selenium.webdriver.common.keys import Keys
 import platform
 import json
 
+from env import Env
 from firebase import Firebase
 from gpt import ChatGPT
 
@@ -31,7 +32,14 @@ def convert_to_json(inp):
         print(f"Error decoding JSON: {e}")
         return None
 
-async def main():
+
+async def manual_update_news(title, content, date):
+    print(title)
+    print(content)
+    print(date)
+
+
+async def update_news():
     gpt = ChatGPT()
     opts = Options()
     fb = Firebase()
@@ -86,6 +94,30 @@ async def main():
             continue
 
     driver.quit()
+
+
+async def main():
+    parser = argparse.ArgumentParser(usage="Web-crawler for StockPointer")
+
+    parser.add_argument("mode", choices=["news", "cal"])
+
+    parser.add_argument("-m", "--manual", action="store_true")
+    parser.add_argument("-t", "--title", help="Title for manual mode")
+    parser.add_argument("-c", "--content", help="Content for manual mode")
+    parser.add_argument("-d", "--date", help="DateTime for manual mode")
+
+    args = parser.parse_args()
+
+    if args.mode == "news":
+        if args.manual: ## Manual mode
+            if not args.title or not args.content or not args.date:
+                parser.error("--manual requires both --title, --content and --date.")
+            else:
+                await manual_update_news(args.title, args.content, args.date)
+        else:
+            await update_news()
+    elif args.mode == "cal":
+        print("Cal mode") ## TODO
         
 
 if __name__ == "__main__":
