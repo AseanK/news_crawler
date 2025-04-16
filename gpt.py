@@ -1,9 +1,9 @@
 from openai import AsyncOpenAI
-import os
+from env import Env
 
 class ChatGPT:
     def __init__(self) -> None:
-        self.API_KEY = os.getenv("CHATGPT_API")
+        self.API_KEY = Env.API_KEY
 
         self.client = AsyncOpenAI(
             api_key = self.API_KEY

@@ -1,6 +1,5 @@
-from datetime import datetime
 import firebase_admin
-from firebase_admin import firestore
+from firebase_admin import firestore_async
 from firebase_admin import credentials
 
 class Firebase:
@@ -9,10 +8,10 @@ class Firebase:
         cred = credentials.Certificate(r'/home/krean/misk/stock-b81fc-firebase-adminsdk-fbsvc-ac0438ae97.json') ## LINUX
         firebase_admin.initialize_app(cred)
 
-        self.db = firestore.client()
+        self.db = firestore_async.client()
 
 
-    def create_data(self, heading, data, timestamp):
+    async def create_news(self, heading, data, timestamp):
         collection_name = "news"
     
         inp = {
@@ -24,11 +23,13 @@ class Firebase:
         }
 
         doc_ref = self.db.collection(collection_name).document()
-        doc_ref.set(inp)
-
-    def read_data(self):
-        pass
+        await doc_ref.set(inp)
 
 
-    def remove_data(self):
-        pass
+    async def create_events(self, date, events):
+        collection_name = "events"
+
+        doc_ref = self.db.collection(collection_name).document(date)
+
+        await doc_ref.set(events)
+        
